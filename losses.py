@@ -1,10 +1,12 @@
 import tensorflow as tf
-import math
+from math import pi
 
-PI = tf.constant(math.pi)
+PI = tf.constant(pi)
 
+@tf.function()
 def vae_loss(model, input):
-    z = model.encode(input)
+    mean, logvar = model.encode(input)
+    z = model.reparameterize(mean, logvar)
     x_logit = model.decode(z)
     cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=input)
     logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
@@ -14,6 +16,4 @@ def vae_loss(model, input):
 
 def log_normal_pdf(sample, mean, log_var):
     log_2pi = tf.math.log(2. * PI)
-    return tf.reduce_sum(
-      -.5 * ((sample - mean) ** 2. * tf.exp(-log_var) + log_var + log_2pi),
-      axis=1)
+    return tf.reduce_sum(-.5 * ((sample - mean) ** 2. * tf.exp(-log_var) + log_var + log_2pi), axis=1)

@@ -1,5 +1,5 @@
 import tensorflow as tf
-import tensorflow_probability as tfp 
+from losses import vae_loss
 
 class VAE(tf.keras.Model):
     def __init__(self, conv_layers, latent_dims):
@@ -10,48 +10,53 @@ class VAE(tf.keras.Model):
         #Build encoder
         self.encoder = tf.keras.Sequential([tf.keras.layers.InputLayer(input_shape=(120,120,3))])
         for i in range(conv_layers):
-            filters = get_filters(i)
+            filters = self.get_filters(i)
             self.encoder.add(tf.keras.layers.Conv2D(
-                filters=filters, kernel_size=3, strides=(2,2), padding='same', acitvation='relu'))
+                filters=filters, kernel_size=3, strides=(2,2), padding='same', activation='relu'))
         self.encoder.add(tf.keras.layers.Flatten())
-        self.encoder.add(tf.keras.layers.Dense(latent_dims))
-        self.encoder.add(Sampler())
+        self.encoder.add(tf.keras.layers.Dense(2*latent_dims))
         
         #Build decoder
         self.decoder = tf.keras.Sequential([tf.keras.layers.InputLayer(input_shape=(latent_dims,))])
-        self.decoder.add(tf.keras.layers.Dense(units=7*7*32, activation='relu')
-        self.decoder.add(tf.keras.layers.Reshape(target_shape=(7, 7, 32)))
+        self.decoder.add(tf.keras.layers.Dense(units=60*60*32, activation='relu'))
+        self.decoder.add(tf.keras.layers.Reshape(target_shape=(60, 60, 32)))
         for i in range(conv_layers-1):
-            filters = get_filters(conv_layers-i)
-            self.encoder.add(tf.keras.layers.Conv2DTranspose(
-                filters=filters, kernel_size=3, strides=2, padding='same', acitvation='relu'))
+            filters = self.get_filters(conv_layers-1-i)
+            self.decoder.add(tf.keras.layers.Conv2DTranspose(
+                filters=filters, kernel_size=(3,3), strides=2, padding='same', activation='relu'))
         self.decoder.add(tf.keras.layers.Conv2DTranspose(
-            filters=1, kernel_size=3, strides=1, padding='same'))
+            filters=3, kernel_size=3, strides=1, padding='same'))
 
-    #Full forward pass
-    def call(self, inputs):
-        encoded_image = self.encoder(inputs)
-        decoded_image = self.decoder(encoded_image)
-        return decoded_image
-
-    #Utility for encoding data
-    def encode(self, x):
-        return self.encoder(x)
+    #Computing number of filters as a function of layer depth
+    def get_filters(self, i):
+        return 2**(i+4)
 
     #Utility for generating new data
     def decode(self, z):
         return self.decoder(z)
     
-    #Computing number of filters as a function of depth
-    def get_filters(i):
-        return 2**(i+4)
+    #TODO: Make note in paper about why we do the split and the dense layer has 2xlatent_dims
+    def encode(self, inputs):
+        mean, logvar = tf.split(self.encoder(inputs), num_or_size_splits=2, axis=1)
+        return mean, logvar
 
-    #Reparameterization trick implemented as a layer
-    class Sampler(tf.keras.layers.Layer):
-        def call(self, inputs):
-            mean, log_var = inputs
-            return tf.random.normal(tf.shape(log_var)) * tf.math.exp(log_var/2) + mean
+    #Reparameterization trick
+    def reparameterize(self, mean, logvar):
+        noise = tf.random.normal(shape=mean.shape)
+        return mean + noise * tf.exp(logvar * .5)
 
+def train_vae(vae, dataset, batch_size, epochs, lr=1e-4):
+    losses = []
+    optimizer = tf.keras.optimizers.Adam(lr)
+    for epoch in range(epochs):
+        for batch in dataset:
+            with tf.GradientTape() as tape:
+                loss = vae_loss(vae, batch)
+                losses.append(loss)
+            gradients = tape.gradient(loss, vae.trainable_variables)
+            optimizer.apply_gradients(zip(gradients, vae.trainable_variables))
+        print(f"Epoch: {epoch}, Loss: {losses[-1]}")
+    return losses
 
 class GAN(tf.keras.Model):
     def __init__(self, coding_size):
@@ -72,11 +77,11 @@ class GAN(tf.keras.Model):
 
         #Build discriminator
         self.discriminator = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(64, kernel_size=3, strides=2, padding='same', activation=lrelu(0.2), input_shape=[120,120,3]),
+            tf.keras.layers.Conv2D(64, kernel_size=3, strides=2, padding='same', activation=self.lrelu(0.2), input_shape=[120,120,3]),
             tf.keras.layers.Dropout(0.4),
-            tf.keras.layers.Conv2D(128, kernel_size=3, strides=2, padding='same', activation=lrelu(0.2)),
+            tf.keras.layers.Conv2D(128, kernel_size=3, strides=2, padding='same', activation=self.lrelu(0.2)),
             tf.keras.layers.Dropout(0.4),
-            tf.keras.layers.Conv2D(256, kernel_size=3, strides=2, padding='same', activation=lrelu(0.2)),
+            tf.keras.layers.Conv2D(256, kernel_size=3, strides=2, padding='same', activation=self.lrelu(0.2)),
             tf.keras.layers.Dropout(0.4),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(1, activation='sigmoid')
@@ -102,15 +107,15 @@ def train_gan(gan, dataset, batch_size, coding_size, epochs):
     generator, discriminator = gan.get_components()
     for epoch in range(epochs):
         for X_batch in dataset:
-        #Train discriminator
-        noise = tf.random.normal(shape=[batch_shape, coding_size])
-        generated_images = generator(noise)
-        X_fake_and_real = tf.concat([generated_images, X_batch], axis=0)
-        y1 = tf.constant([[0.]]*batch_size + [[1.]]*batch_size)
-        discriminator.trainable = True
-        discriminator.train_on_batch(X_fake_and_real, y1)
-        #Train generator
-        noise = tf.random.normal(shape=[batch_size, coding_size])
-        y2 = tf.constant([[1.]]*batch_size)
-        discriminator.trainable = False
-        gan.train_on_batch(noise, y2)
+            #Train discriminator
+            noise = tf.random.normal(shape=[batch_shape, coding_size])
+            generated_images = generator(noise)
+            X_fake_and_real = tf.concat([generated_images, X_batch], axis=0)
+            y1 = tf.constant([[0.]]*batch_size + [[1.]]*batch_size)
+            discriminator.trainable = True
+            discriminator.train_on_batch(X_fake_and_real, y1)
+            #Train generator
+            noise = tf.random.normal(shape=[batch_size, coding_size])
+            y2 = tf.constant([[1.]]*batch_size)
+            discriminator.trainable = False
+            gan.train_on_batch(noise, y2)

@@ -1,5 +1,5 @@
 from models import VAE
-from data import fetch_data
+from data import fetch_data, transform_for_vae
 from losses import vae_loss
 from utils import plot_loss, sample_from_vae
 import argparse
@@ -16,13 +16,7 @@ batch_size = 32
 raw_data = fetch_data()
 data = transform_for_vae(raw_data, batch_size=batch_size)
 
-#Build model
-vae = VAE(args.conv_layers, args.latent_dims)
-vae.add_loss(vae_latent_loss)
-vae.compile(loss=vae_loss, optimizer="adam")
-
-#Train model
-history = vae.fit(data, data, epochs=args.epochs, batch_size=32)
+#TODO: Call manual training function here
 
 #Plot diagnostics
 plot_loss(history)
