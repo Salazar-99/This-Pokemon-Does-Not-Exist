@@ -9,6 +9,7 @@ def fetch_data():
     images = []
     for file in os.listdir(path):
         filepath = path + "/" + file
+        #Float32 for compatability with TF ops default
         images.append(image.imread(filepath).astype(float32))
     dataset = tf.data.Dataset.from_tensor_slices(images)
     return dataset
@@ -19,7 +20,6 @@ def fetch_data_for_vae(batch_size):
     def preprocess(x):
         #Normalize pixel values to range (0,1)
         data = x/255
-        #Return (input, target) which are the same image
         return data
     return dataset.map(preprocess).batch(batch_size)
 
@@ -29,6 +29,5 @@ def fetch_data_for_gan(batch_size):
     def preprocess(x):
         #Scale pixel values to range (-1,1)
         data = (x/255)*2-1
-        #Return (input, target) which are the same image
         return data
     return dataset.map(preprocess).batch(batch_size)

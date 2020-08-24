@@ -9,6 +9,9 @@ def plot_loss(loss):
     plt.grid(alpha=0.5)
     plt.show()
 
+#TODO: Generalize image plots in sampling functions to display multiple images at once
+# Currently only n_samples=1 works as expected
+
 #Generate n_samples images from trained VAE
 def sample_from_vae(vae, n_samples):
     z = tf.random.normal([n_samples, vae.latent_dims])
@@ -21,5 +24,6 @@ def sample_from_vae(vae, n_samples):
 def sample_from_gan(gan, n_samples):
     z = tf.random.normal([n_samples, gan.coding_size])
     images = gan.generator(z)
-    plt.imshow(images)
+    for image in images:
+        plt.imshow(image)
     return images
