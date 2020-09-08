@@ -20,10 +20,16 @@ class VAE(tf.keras.Model):
         self.decoder = tf.keras.Sequential([tf.keras.layers.InputLayer(input_shape=(latent_dims,))])
         self.decoder.add(tf.keras.layers.Dense(units=60*60*32, activation='relu'))
         self.decoder.add(tf.keras.layers.Reshape(target_shape=(60, 60, 32)))
-        for i in range(conv_layers-1):
+        #Upscaling layers
+        for i in range(1):
             filters = self.get_filters(conv_layers-1-i)
             self.decoder.add(tf.keras.layers.Conv2DTranspose(
                 filters=filters, kernel_size=(3,3), strides=2, padding='same', activation='relu'))
+        #Remaining conv layers
+        for i in range(1, conv_layers):
+            filters = self.get_filters(conv_layers-1-i)
+            self.decoder.add(tf.keras.layers.Conv2DTranspose(
+                filters=filters, kernel_size=(3,3), strides=1, padding='same', activation='relu'))
         self.decoder.add(tf.keras.layers.Conv2DTranspose(
             filters=3, kernel_size=3, strides=1, padding='same'))
 
@@ -55,9 +61,10 @@ def train_vae(vae, dataset, batch_size, epochs, lr=1e-4):
                 losses.append(loss)
             gradients = tape.gradient(loss, vae.trainable_variables)
             optimizer.apply_gradients(zip(gradients, vae.trainable_variables))
-        print(f"Epoch: {epoch}, Loss: {losses[-1]}")
+        print(f"Epoch: {epoch+1}, Loss: {losses[-1]}")
     return losses
 
+#TODO: Refactor GAN into components so as to not subclass tf.keras.Model
 class GAN(tf.keras.Model):
     def __init__(self, coding_size):
         super().__init__()
@@ -65,8 +72,8 @@ class GAN(tf.keras.Model):
 
         #Build generator
         self.generator = tf.keras.models.Sequential([
-            tf.keras.layers.Dense(6*6*256, input_shape=[coding_size]),
-            tf.keras.layers.Reshape([15,15,256]),
+            tf.keras.layers.Dense(15*15*32, input_shape=[coding_size]),
+            tf.keras.layers.Reshape([15,15,32]),
             tf.keras.layers.BatchNormalization(),
             tf.keras.layers.Conv2DTranspose(128, kernel_size=3, strides=2, padding='same', activation='relu'),
             tf.keras.layers.BatchNormalization(),
@@ -87,17 +94,18 @@ class GAN(tf.keras.Model):
             tf.keras.layers.Dense(1, activation='sigmoid')
         ])
 
-        #Full model
-        self.gan = tf.keras.models.Sequential([generator, discriminator])
+    #Components in here depend on components created in constructor
+    def build(self, input_shape):
+        #Build full model
+        self.gan = tf.keras.models.Sequential([self.generator, self.discriminator])
 
-        #Set appropriate compilation configuration for training
-        self.discriminator.compile(loss='binary_crossentropy', optimizer='rmsprop')
-        self.discriminator.trainable = False
-        self.gan.compile(loss='binary_crossentropy', optimizer='rmsprop')
+    #Boilerplate for subclassing
+    def call(self, inputs):
+        pass
 
     #Utility for use in training  
     def get_components(self):
-        return self.generator, self.disciminator
+        return self.generator, self.discriminator
     
     #Convenience function for leak ReLU
     def lrelu(self, x):
@@ -105,17 +113,29 @@ class GAN(tf.keras.Model):
 
 def train_gan(gan, dataset, batch_size, coding_size, epochs):
     generator, discriminator = gan.get_components()
+    #Set appropriate compilation configuration for training
+    discriminator.compile(loss='binary_crossentropy', optimizer='rmsprop')
+    discriminator.trainable = False
+    gan.compile(loss='binary_crossentropy', optimizer='rmsprop')
+    discriminator_loss = []
+    generator_loss = []
     for epoch in range(epochs):
+        batch = 1
         for X_batch in dataset:
             #Train discriminator
-            noise = tf.random.normal(shape=[batch_shape, coding_size])
+            noise = tf.random.normal(shape=[batch_size, coding_size])
             generated_images = generator(noise)
             X_fake_and_real = tf.concat([generated_images, X_batch], axis=0)
             y1 = tf.constant([[0.]]*batch_size + [[1.]]*batch_size)
             discriminator.trainable = True
-            discriminator.train_on_batch(X_fake_and_real, y1)
+            d_loss = discriminator.train_on_batch(X_fake_and_real, y1)
+            discriminator_loss.append(d_loss)
             #Train generator
             noise = tf.random.normal(shape=[batch_size, coding_size])
             y2 = tf.constant([[1.]]*batch_size)
             discriminator.trainable = False
-            gan.train_on_batch(noise, y2)
+            g_loss = gan.train_on_batch(noise, y2)
+            generator_loss.append(g_loss)
+            batch += 1
+        print(f"Epoch: {epoch}, Batch: {batch}, Discriminator loss: {discriminator_loss[-1]}, Generator loss: {generator_loss[-1]}")
+    return {"d_loss": discriminator_loss, "g_loss": generator_loss}
