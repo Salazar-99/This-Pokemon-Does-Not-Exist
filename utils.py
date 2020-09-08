@@ -10,20 +10,26 @@ def plot_loss(loss):
     plt.grid(alpha=0.5)
     plt.show()
 
-#Generate n_samples images from trained VAE
-def sample_from_vae(vae, n_samples):
-    z = tf.random.normal([n_samples, vae.latent_dims])
+#Generate 5 images from trained VAE
+def sample_from_vae(vae):
+    z = tf.random.normal([5, vae.latent_dims])
     images = vae.decode(z)
     plot_images(images)
     return images
 
-#Generate n_samples images from trained GAN
-def sample_from_gan(gan, n_samples):
-    z = tf.random.normal([n_samples, gan.coding_size])
+#Generate 5 images from trained GAN
+def sample_from_gan(gan):
+    z = tf.random.normal([5, gan.coding_size])
     images = gan.generator(z)
     plot_images(images)
     return images
 
-#TODO: Implement function for plotting multiple images on one figure
 def plot_images(images):
-    pass
+    #1 row, 5 columns
+    columns = 5
+    rows = 1
+    fig=plt.figure(figsize=(10, 20))
+    for i in range(1, columns*rows +1):
+        fig.add_subplot(rows, columns, i)
+        plt.imshow(images[i-1])
+    plt.show()
