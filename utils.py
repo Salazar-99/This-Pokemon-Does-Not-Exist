@@ -8,7 +8,7 @@ def plot_loss(loss):
     Plot loss as a function of batch.
 
     Arguments:
-        loss - A list of losses of length batch_size * epochs
+        loss (List[float]) - list of losses of length batch_size * epochs
     """
     epochs = [x+1 for x in range(len(loss))]
     plt.figure(figsize=(10,5))
@@ -22,7 +22,7 @@ def sample_from_vae(vae):
     Generate and plot 5 samples from VAE.
 
     Arguments:
-        vae - Tensorflow model
+        vae (VAE) - Trained VAE
     """
     z = tf.random.normal([5, vae.latent_dims])
     images = vae.decode(z)
@@ -34,7 +34,7 @@ def sample_from_gan(gan):
     Generate and plot 5 samples from GAN.
 
     Arguments:
-        gan - Tensorflow model
+        gan (GAN) - Trained GAN
     """
     z = tf.random.normal([5, gan.coding_size])
     images = gan.generator(z)

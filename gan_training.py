@@ -1,6 +1,6 @@
 from models import GAN, train_gan
-from data import fetch_data, transform_for_gan
-from utils import plot_loss, sample_from_gan
+from data import fetch_data_for_gan
+from utils import plot_loss, sample_from_gan, upload_model
 import argparse
 
 #Command line argument parsing
@@ -18,10 +18,18 @@ data = transform_for_gan(raw_data, batch_size=batch_size)
 gan = GAN(coding_size=args.coding_size)
 
 #Train model
-train_gan(gan, data, batch_size, args.coding_size, args.epochs)
+losses = train_gan(gan, data, batch_size, args.coding_size, args.epochs)
+
+#Plot losses
+plot_loss(losses['d_loss']) #Discriminator loss
+plot_loss(losses['g_loss']) #Generator loss
 
 #Plot samples
 sample_from_gan(gan, n_samples=5)
 
-#Save model
-gan.save('Models/GAN')
+#Upload trained model to S3 bucket
+print("Would you like to save and upload the trained model? (Y/N): ")
+choice = input()
+if choice in ["Y", "Yes", "yes"]:
+    vae.save('models/GAN')
+    upload_model('models/GAN')

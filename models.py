@@ -67,11 +67,11 @@ def train_vae(vae, dataset, batch_size, epochs, lr=1e-4):
     Train VAE and return list of losses.
 
     Arguments:
-        vae - Tensorflow model, VAE to be trained
-        dataset - tf.Dataset of all images
-        batch_size - Integer number of data points per batch
-        epochs - Integer number of epochs to train for
-        lr - Float, learning rate for Adam optimizer, default 1e-4
+        vae (tf.Model) - VAE to be trained
+        dataset (tf.Dataset) - Datset containing all preprocessed and batched images
+        batch_size (int) - Number of data points per batch
+        epochs (int) - Total number of epochs to train for
+        lr (float) - learning rate for Adam optimizer, defaults to 1e-4
 
     Returns:
         losses - List containing loss for each batch
@@ -94,8 +94,8 @@ def vae_loss(model, input):
     Loss function for Variational Autoencoder.
 
     Arguments:
-        model - Tensorflow model, VAE to be trained
-        input - Batched data points as input
+        model (tf.Model) - VAE to be trained
+        input (tf.Tensor) - Batched data points as input
 
     Returns:
         Sum of reconstruction loss and KL-divergence averaged over batched input
@@ -115,9 +115,9 @@ def log_normal_pdf(sample, mean, log_var):
     Compute the the value of log-normal distribution pdf at the sample.
 
     Arguments:
-        sample - value at which the 
-        mean - mean of target log-normal distribution
-        log_var - log variance of target log-normal distribution
+        sample (np.array) - value at which the 
+        mean (float) - mean of target log-normal distribution
+        log_var (float) - log variance of target log-normal distribution
 
     Return:
         value of log-normal pdf parameterized by mean and log_var at the sample value
@@ -199,4 +199,5 @@ def train_gan(gan, dataset, batch_size, coding_size, epochs):
             generator_loss.append(g_loss)
             batch += 1
         print(f"Epoch: {epoch}, Batch: {batch}, Discriminator loss: {discriminator_loss[-1]}, Generator loss: {generator_loss[-1]}")
-    return {"d_loss": discriminator_loss, "g_loss": generator_loss}
+    losses = {"d_loss": discriminator_loss, "g_loss": generator_loss}
+    return losses

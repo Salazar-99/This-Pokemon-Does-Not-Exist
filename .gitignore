@@ -5,6 +5,7 @@ notes.txt
 .vscode/
 pokemon-venv/
 testing.ipynb
+.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
