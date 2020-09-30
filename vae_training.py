@@ -1,6 +1,7 @@
 from models import VAE, vae_loss , train_vae
 from data import fetch_data_for_vae
 from utils import plot_loss, sample_from_vae, upload_model
+import tensorflow as tf
 import argparse
 
 #Command line argument parsing
@@ -12,25 +13,28 @@ parser.add_argument('--path', help="Path to dataset directory")
 args = parser.parse_args()
 
 #Get data
+print("Fetching data...")
 path = args.path
 batch_size = 32
 data = fetch_data_for_vae(path, batch_size)
 
 #Build VAE
+print("Building model...")
 vae = VAE(conv_layers=args.conv_layers, latent_dims=args.latent_dims)
 
 #Train VAE
-losses = train_vae(vae, dataset, batch_size, epochs=args.epochs)
+print("Starting training...")
+losses = train_vae(vae, data, batch_size, epochs=args.epochs)
 
 #Plot diagnostics
 plot_loss(losses)
 
 #Plot some samples
-sample_from_vae(vae, n_samples=5)
+sample_from_vae(vae)
 
 #Upload trained model to S3 bucket
 print("Would you like to save and upload the trained model? (Y/N): ")
 choice = input()
 if choice in ["Y", "Yes", "yes"]:
-    vae.save('models/VAE')
-    upload_model('models/VAE')
+    tf.saved_model.save(vae, 'Models/VAE')
+    upload_model(path_to_model='Models/VAE', object_name='vae')

@@ -11,7 +11,7 @@ def fetch_data(path):
         path (str) - Path to dataset directory
 
     Returns:
-        tf.Dataset object containing complete dataset of images
+        dataset (tf.Dataset) - Object containing complete set of raw images
     """
     images = []
     for file in os.listdir(path):
@@ -31,7 +31,7 @@ def fetch_data_for_vae(path, batch_size):
         batch_size (int) - Size of chunks of data to be processed at one time by the model
 
     Returns:
-        tf.Dataset object of preprocessed and batched images
+        dataset (tf.Dataset) - Object containing preprocessed and batched images
     """
     dataset = fetch_data(path)
     def preprocess(x):
@@ -52,7 +52,7 @@ def fetch_data_for_gan(path, batch_size):
         batch_size (int) - Size of chunks of data to be processed at one time by the model
 
     Returns:
-        tf.Dataset object of preprocessed and batched images
+       dataset (tf.Dataset) - Object containing preprocessed and batched images
     """
     dataset = fetch_data(path)
     def preprocess(x):

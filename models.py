@@ -1,5 +1,5 @@
 import tensorflow as tf
-from losses import vae_loss
+from math import pi
 
 PI = tf.constant(pi)
 
@@ -43,7 +43,7 @@ class VAE(tf.keras.Model):
                 filters=filters, kernel_size=(3,3), strides=1, padding='same', activation='relu'))
         self.decoder.add(tf.keras.layers.Conv2DTranspose(
             filters=3, kernel_size=3, strides=1, padding='same'))
-
+    
     #Computing number of filters as a function of layer depth
     def get_filters(self, i):
         return 2**(i+4)

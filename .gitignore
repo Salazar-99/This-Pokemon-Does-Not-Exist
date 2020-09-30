@@ -6,6 +6,7 @@ notes.txt
 pokemon-venv/
 testing.ipynb
 .env
+Models/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

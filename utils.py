@@ -1,7 +1,8 @@
-import tensorflow as tf 
 import matplotlib.pyplot as plt
 from matplotlib import image
+import tensorflow as tf
 import boto3
+import os
 
 def plot_loss(loss):
     """
@@ -59,7 +60,7 @@ def plot_images(images):
         plt.imshow(images[i-1])
     plt.show()
 
-def upload_model(path_to_model, bucket='pokemon_dne', object_name=None):
+def upload_model(path_to_model, object_name, bucket='pokemon-dne'):
     """
     Uploads saved model to S3 bucket.
 
@@ -69,9 +70,15 @@ def upload_model(path_to_model, bucket='pokemon_dne', object_name=None):
         object_name (str) - Name of the model once it's uploaded to S3
 
     Notes:
-        In order to use boto3, AWS credentials must be configured on host machine
+        In order to use boto3, AWS credentials must be configured on host machine.
+        In this project this is accomplished by creating a .env file containing
+        the nevessary credentials and running the configure_aws.sh script to 
+        write them in the correct format to their default location.
     """
-    if object_name is None:
-        object_name = file_name
     s3_client = boto3.client('s3')
-    s3_client.upload_file(path_to_model, bucket, object_name)
+    for root, dirs, files in os.walk(path_to_model):
+        for filename in files:
+            local_path = os.path.join(root, filename)
+            relative_path = os.path.relpath(local_path, path_to_model)
+            s3_path = os.path.join(object_name, relative_path)
+            s3_client.upload_file(local_path, bucket, s3_path)
