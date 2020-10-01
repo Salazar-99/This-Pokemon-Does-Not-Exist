@@ -6,17 +6,17 @@ import argparse
 #Command line argument parsing
 parser = argparse.ArgumentParser(description='Specify model hyperparameters')
 parser.add_argument('--coding_size', type=int, help="Specify integer size of latent codings")
+parser.add_argument('--conv_layers', type=int, help="Specify integer number of convolutional layers in Generator and Discriminator")
 parser.add_argument('--epochs', type=int, help="Specify integer number of epochs")
 args = parser.parse_args()
 
 #Get data
 batch_size = 32
-raw_data = fetch_data()
-data = transform_for_gan(raw_data, batch_size=batch_size)
+data = fetch_data_for_gan(batch_size=batch_size)
 
 #Build model
-generator = Generator()
-discriminator = Discriminator()
+generator = Generator(coding_size=args.coding_size, conv_layers=args.conv_layers)
+discriminator = Discriminator(conv_layers=args.conv_layers)
 gan = tf.keras.models.Sequential([generator, discriminator])
 discriminator.compile(loss='binary_crossentropy', optimizer='rmsprop')
 discriminator.trainable = False

@@ -105,6 +105,7 @@ def vae_loss(model, input):
     x_logit = model.decode(z)
     cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=input)
     logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
+    #TODO: Should the logvar here be 0?
     logpz = log_normal_pdf(z, 0., 0.)
     logqz_x = log_normal_pdf(z, mean, logvar)
     return -tf.reduce_mean(logpx_z + logpz - logqz_x)
@@ -125,12 +126,61 @@ def log_normal_pdf(sample, mean, log_var):
     log_2pi = tf.math.log(2. * PI)
     return tf.reduce_sum(-.5 * ((sample - mean) ** 2. * tf.exp(-log_var) + log_var + log_2pi), axis=1)
 
-#TODO: Implement Generator, Discriminator, and any required Layer abstractions
-
 class Generator(tf.keras.Model):
-    def __init__(self,)
+    """
+    Generator for a Deep Convolutional Generative Adversarial Network.
+    Takes in a random vector of length coding_size and produces an image with dimensions (120,120,3).
+
+    Arguments:
+        coding_size (int) - Size of the random vector input
+        conv_layers (int) - Number of Transpose Convolution layers in the network
+    """
+    def __init__(self, coding_size, conv_layers):
+        super().__init__()
+        self.coding_size = coding_size
+        self.generator = tf.keras.models.Sequential([
+            tf.keras.layers.Dense([4*4*1024], input_shape=[self.coding_size]),
+            tf.keras.layers.Reshape([4*4*1024]),
+            tf.keras.layers.BatchNormalization()
+        ])
+        for i in reversed(range(1, conv_layers+1)):
+            filters = self.get_filters(i)
+            self.generator.add(tf.keras.layers.Conv2DTranspose(
+                filters=filters, kernel_size=(3,3), strides=2, padding='same', activation='relu'))
+            self.generator.add(tf.keras.layers.BatchNormalization())
+        self.generator.add(tf.keras.layers.Conv2DTranspose(1, kernel_size=3, strides=2, padding=same, activation='tanh'))
+
+    def call(self, inputs):
+        output = self.generator(inputs)
+
+    def get_filters(self, i):
+        return 2**(5+i)
 
 class Discriminator(tf.keras.Model):
+    """
+    Discriminator for a Deep Convolutional Generative Adversarial Network.
+    Takes in an image with dimensions (120,120,3) and outputs the probability that it belongs to the original dataset.
+
+    Arguments:
+        conv_layers (int) - Number of 2D Convolutional layers in the network
+    """
+    def __init__(self, conv_layers):
+        super().__init__()
+        self.discriminator = tf.keras.models.Sequential()
+        for i in range(1, conv_layers):
+            filters = self.get_filters(i)
+            self.discriminator.add(tf.keras.layers.Conv2D(
+                filters=filters, kernel_size=3, strides=(2,2), padding='same', activation=tf.keras.layers.LeakyReLU()))
+        self.discriminator.add([
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(1, activation='sigmoid')
+        ])
+    
+    def call(self, inputs):
+        outputs = self.discriminator(inputs)
+
+    def get_filters(self, i):
+        2**(5+i)
 
 def train_gan(gan, dataset, epochs):
     """
