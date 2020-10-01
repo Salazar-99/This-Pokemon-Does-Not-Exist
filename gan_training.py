@@ -1,4 +1,4 @@
-from models import GAN, train_gan
+from models import Generator, Discriminator, train_gan
 from data import fetch_data_for_gan
 from utils import plot_loss, sample_from_gan, upload_model
 import argparse
@@ -15,7 +15,12 @@ raw_data = fetch_data()
 data = transform_for_gan(raw_data, batch_size=batch_size)
 
 #Build model
-gan = GAN(coding_size=args.coding_size)
+generator = Generator()
+discriminator = Discriminator()
+gan = tf.keras.models.Sequential([generator, discriminator])
+discriminator.compile(loss='binary_crossentropy', optimizer='rmsprop')
+discriminator.trainable = False
+gan.compile(loss='binary_crossentropy', optimizer='rmsprop')
 
 #Train model
 losses = train_gan(gan, data, batch_size, args.coding_size, args.epochs)

@@ -125,59 +125,29 @@ def log_normal_pdf(sample, mean, log_var):
     log_2pi = tf.math.log(2. * PI)
     return tf.reduce_sum(-.5 * ((sample - mean) ** 2. * tf.exp(-log_var) + log_var + log_2pi), axis=1)
 
-#TODO: Refactor GAN into components so as to not subclass tf.keras.Model
-class GAN(tf.keras.Model):
-    def __init__(self, coding_size):
-        super().__init__()
-        self.coding_size = coding_size
+#TODO: Implement Generator, Discriminator, and any required Layer abstractions
 
-        #Build generator
-        self.generator = tf.keras.models.Sequential([
-            tf.keras.layers.Dense(15*15*32, input_shape=[coding_size]),
-            tf.keras.layers.Reshape([15,15,32]),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2DTranspose(128, kernel_size=3, strides=2, padding='same', activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2DTranspose(64, kernel_size=3, strides=2, padding='same', activation='relu'),
-            tf.keras.layers.BatchNormalization(),
-            tf.keras.layers.Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', activation='tanh'),
-        ])
+class Generator(tf.keras.Model):
+    def __init__(self,)
 
-        #Build discriminator
-        self.discriminator = tf.keras.models.Sequential([
-            tf.keras.layers.Conv2D(64, kernel_size=3, strides=2, padding='same', activation=self.lrelu(0.2), input_shape=[120,120,3]),
-            tf.keras.layers.Dropout(0.4),
-            tf.keras.layers.Conv2D(128, kernel_size=3, strides=2, padding='same', activation=self.lrelu(0.2)),
-            tf.keras.layers.Dropout(0.4),
-            tf.keras.layers.Conv2D(256, kernel_size=3, strides=2, padding='same', activation=self.lrelu(0.2)),
-            tf.keras.layers.Dropout(0.4),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(1, activation='sigmoid')
-        ])
+class Discriminator(tf.keras.Model):
 
-    #Components in here depend on components created in constructor
-    def build(self, input_shape):
-        #Build full model
-        self.gan = tf.keras.models.Sequential([self.generator, self.discriminator])
+def train_gan(gan, dataset, epochs):
+    """
+    Train a Generative Adversarial Network and return batch losses
 
-    #Boilerplate for subclassing
-    def call(self, inputs):
-        pass
+    Arguments:
+        gan (tf.keras.Model) - Complete GAN model, consisting of a Generator and Discriminator
+            stacked as a Sequential model
+        dataset (tf.Dataset) - Batched and preprocessed set of images to train on
+        epochs (int) - Number of times to train over the entire dataset
 
-    #Utility for use in training  
-    def get_components(self):
-        return self.generator, self.discriminator
-    
-    #Convenience function for leak ReLU
-    def lrelu(self, x):
-        return tf.keras.layers.LeakyReLU(x)
-
-def train_gan(gan, dataset, batch_size, coding_size, epochs):
-    generator, discriminator = gan.get_components()
-    #Set appropriate compilation configuration for training
-    discriminator.compile(loss='binary_crossentropy', optimizer='rmsprop')
-    discriminator.trainable = False
-    gan.compile(loss='binary_crossentropy', optimizer='rmsprop')
+    Returns:
+        losses (dict) - Dictionary containing lists of generator and discriminator losses at each batch
+    """
+    batch_size = int(dataset._batch_size)
+    generator, discriminator = gan.get_layers
+    coding_size = generator.coding_size
     discriminator_loss = []
     generator_loss = []
     for epoch in range(epochs):
