@@ -8,13 +8,16 @@ parser = argparse.ArgumentParser(description='Specify model hyperparameters')
 parser.add_argument('--coding_size', type=int, help="Specify integer size of latent codings")
 parser.add_argument('--conv_layers', type=int, help="Specify integer number of convolutional layers in Generator and Discriminator")
 parser.add_argument('--epochs', type=int, help="Specify integer number of epochs")
+parser.add_argument('--path', type=int, help="Path to dataset directory")
 args = parser.parse_args()
 
 #Get data
+print("Fetching data...")
 batch_size = 32
-data = fetch_data_for_gan(batch_size=batch_size)
+data = fetch_data_for_gan(path=args.path, batch_size=batch_size)
 
 #Build model
+print("Building model...")
 generator = Generator(coding_size=args.coding_size, conv_layers=args.conv_layers)
 discriminator = Discriminator(conv_layers=args.conv_layers)
 gan = tf.keras.models.Sequential([generator, discriminator])
@@ -23,6 +26,7 @@ discriminator.trainable = False
 gan.compile(loss='binary_crossentropy', optimizer='rmsprop')
 
 #Train model
+print("Starting training...")
 losses = train_gan(gan, data, batch_size, args.coding_size, args.epochs)
 
 #Plot losses

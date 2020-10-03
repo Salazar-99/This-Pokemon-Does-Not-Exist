@@ -42,7 +42,7 @@ class VAE(tf.keras.Model):
             self.decoder.add(tf.keras.layers.Conv2DTranspose(
                 filters=filters, kernel_size=(3,3), strides=1, padding='same', activation='relu'))
         self.decoder.add(tf.keras.layers.Conv2DTranspose(
-            filters=3, kernel_size=3, strides=1, padding='same'))
+            filters=3, kernel_size=3, strides=1, padding='same', activation='sigmoid'))
     
     #Computing number of filters as a function of layer depth
     def get_filters(self, i):
