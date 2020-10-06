@@ -239,6 +239,6 @@ def train_gan(gan, dataset, epochs):
             g_loss = gan.train_on_batch(noise, y2)
             generator_loss.append(g_loss)
             batch += 1
-        print(f"Epoch: {epoch}, Discriminator loss: {discriminator_loss[-1]}, Generator loss: {generator_loss[-1]}")
+        print(f"Epoch: {epoch+1}, Discriminator loss: {discriminator_loss[-1]}, Generator loss: {generator_loss[-1]}")
     losses = {"d_loss": discriminator_loss, "g_loss": generator_loss}
     return losses

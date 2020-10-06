@@ -6,15 +6,33 @@ import os
 
 def plot_loss(loss):
     """
-    Plot loss as a function of batch.
+    Plot loss as a function of batch. Used for VAE.
 
     Arguments:
         loss (List[float]) - list of losses of length batch_size * epochs
     """
-    epochs = [x+1 for x in range(len(loss))]
+    batch = [x+1 for x in range(len(loss))]
     plt.figure(figsize=(10,5))
-    plt.plot(epochs, loss, color="blue", alpha=0.6)
+    plt.plot(batch, loss, color="blue", alpha=0.6)
     plt.title('Training Loss vs. Batch')
+    plt.grid(alpha=0.5)
+    plt.show()
+
+def plot_gan_losses(losses):
+    """
+    Plot Generator and Discriminator losses as a function of batch. Used for GAN.
+
+    Arguments:
+        lossses (dict) - Dictionary containing 'd_loss' and 'g_loss' which are lists of length (batch_size * epochs)
+    """
+    d_loss = losses['d_loss']
+    g_loss = losses['g_loss']
+    batch = [x+1 for x in range(len(d_loss))]
+    plt.figure(figsize=(10,5))
+    plt.plot(batch, d_loss, alpha=0.6, color="blue", label="Discriminator")
+    plt.plot(batch, g_loss, alpha =0.6, color="red", label="Generator")
+    plt.title('Gan Losses vs. Batch')
+    plt.legend()
     plt.grid(alpha=0.5)
     plt.show()
 
@@ -37,8 +55,9 @@ def sample_from_gan(gan):
     Arguments:
         gan (GAN) - Trained GAN
     """
-    z = tf.random.normal([5, gan.coding_size])
-    images = gan.generator(z, training=False)
+    generator, _ = gan.layers
+    z = tf.random.normal([5, generator.coding_size])
+    images = generator(z)
     plot_images(images)
     return images
 

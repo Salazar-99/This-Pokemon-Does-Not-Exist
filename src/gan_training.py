@@ -1,6 +1,7 @@
 from models import Generator, Discriminator, train_gan
 from data import fetch_data_for_gan
-from utils import plot_loss, sample_from_gan, upload_model
+from utils import plot_gan_losses, sample_from_gan, upload_model
+import tensorflow as tf
 import argparse
 
 #Command line argument parsing
@@ -18,7 +19,7 @@ data = fetch_data_for_gan(path=args.path, batch_size=batch_size)
 
 #Build model
 print("Building model...")
-generator = Generator(coding_size=args.coding_size, conv_layers=args.conv_layers)
+generator = Generator(coding_size=args.coding_size)
 discriminator = Discriminator(conv_layers=args.conv_layers)
 gan = tf.keras.models.Sequential([generator, discriminator])
 discriminator.compile(loss='binary_crossentropy', optimizer='rmsprop')
@@ -30,15 +31,14 @@ print("Starting training...")
 losses = train_gan(gan, data, args.epochs)
 
 #Plot losses
-plot_loss(losses['d_loss']) #Discriminator loss
-plot_loss(losses['g_loss']) #Generator loss
+plot_gan_losses(losses)
 
 #Plot samples
-sample_from_gan(gan, n_samples=5)
+sample_from_gan(gan)
 
 #Upload trained model to S3 bucket
 print("Would you like to save and upload the trained model? (Y/N): ")
 choice = input()
 if choice in ["Y", "Yes", "yes"]:
-    tf.saved_model.save(vae, 'Models/GAN')
+    tf.saved_model.save(gan, 'Models/GAN')
     upload_model(path_to_model='Models/GAN', object_name='gan')
