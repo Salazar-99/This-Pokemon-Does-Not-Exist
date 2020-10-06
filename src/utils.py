@@ -38,7 +38,7 @@ def sample_from_gan(gan):
         gan (GAN) - Trained GAN
     """
     z = tf.random.normal([5, gan.coding_size])
-    images = gan.generator(z)
+    images = gan.generator(z, training=False)
     plot_images(images)
     return images
 

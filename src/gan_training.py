@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description='Specify model hyperparameters')
 parser.add_argument('--coding_size', type=int, help="Specify integer size of latent codings")
 parser.add_argument('--conv_layers', type=int, help="Specify integer number of convolutional layers in Generator and Discriminator")
 parser.add_argument('--epochs', type=int, help="Specify integer number of epochs")
-parser.add_argument('--path', type=int, help="Path to dataset directory")
+parser.add_argument('--path', help="Path to dataset directory")
 args = parser.parse_args()
 
 #Get data
@@ -27,7 +27,7 @@ gan.compile(loss='binary_crossentropy', optimizer='rmsprop')
 
 #Train model
 print("Starting training...")
-losses = train_gan(gan, data, batch_size, args.coding_size, args.epochs)
+losses = train_gan(gan, data, args.epochs)
 
 #Plot losses
 plot_loss(losses['d_loss']) #Discriminator loss

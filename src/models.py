@@ -105,7 +105,6 @@ def vae_loss(model, input):
     x_logit = model.decode(z)
     cross_ent = tf.nn.sigmoid_cross_entropy_with_logits(logits=x_logit, labels=input)
     logpx_z = -tf.reduce_sum(cross_ent, axis=[1, 2, 3])
-    #TODO: Should the logvar here be 0?
     logpz = log_normal_pdf(z, 0., 0.)
     logqz_x = log_normal_pdf(z, mean, logvar)
     return -tf.reduce_mean(logpx_z + logpz - logqz_x)
@@ -133,26 +132,33 @@ class Generator(tf.keras.Model):
 
     Arguments:
         coding_size (int) - Size of the random vector input
-        conv_layers (int) - Number of Transpose Convolution layers in the network
     """
-    def __init__(self, coding_size, conv_layers):
+    def __init__(self, coding_size):
         super().__init__()
         self.coding_size = coding_size
-        self.generator = tf.keras.models.Sequential([
-            tf.keras.layers.Dense([4*4*1024], input_shape=[self.coding_size]),
-            tf.keras.layers.Reshape([4*4*1024]),
-            tf.keras.layers.BatchNormalization()
-        ])
-        for i in reversed(range(1, conv_layers+1)):
+        self.input_layer = tf.keras.layers.Dense(15*15*512, input_shape=(self.coding_size,))
+        self.reshape_layers = [
+            tf.keras.layers.Reshape([15*15*512]),
+            tf.keras.layers.BatchNormalization(),
+            tf.keras.layers.LeakyReLU(),
+            tf.keras.layers.Reshape((15,15,512))
+        ]
+        self.conv_layers = []
+        for i in reversed(range(1, 3)):
             filters = self.get_filters(i)
-            self.generator.add(tf.keras.layers.Conv2DTranspose(
+            self.conv_layers.append(tf.keras.layers.Conv2DTranspose(
                 filters=filters, kernel_size=(3,3), strides=2, padding='same', activation='relu'))
-            self.generator.add(tf.keras.layers.BatchNormalization())
-        self.generator.add(tf.keras.layers.Conv2DTranspose(1, kernel_size=3, strides=2, padding=same, activation='tanh'))
+            self.conv_layers.append(tf.keras.layers.BatchNormalization())
+        self.conv_layers.append(tf.keras.layers.Conv2DTranspose(3, kernel_size=3, strides=2, padding='same', activation='tanh'))
 
     def call(self, inputs):
-        output = self.generator(inputs)
-
+        x = self.input_layer(inputs)
+        for layer in self.reshape_layers:
+            x = layer(x)
+        for layer in self.conv_layers:
+            x = layer(x)
+        return x
+    
     def get_filters(self, i):
         return 2**(5+i)
 
@@ -166,18 +172,30 @@ class Discriminator(tf.keras.Model):
     """
     def __init__(self, conv_layers):
         super().__init__()
-        self.discriminator = tf.keras.models.Sequential()
-        for i in range(1, conv_layers):
+        #First conv layer, seeding input shape
+        self.input_layer = tf.keras.layers.Conv2D(
+                filters=2**6, kernel_size=3, strides=(2,2), padding='same', 
+                activation=tf.keras.layers.LeakyReLU(), input_shape=(120,120,3))
+        #Remaining conv layers
+        self.conv_layers = []
+        for i in range(2, conv_layers):
             filters = self.get_filters(i)
-            self.discriminator.add(tf.keras.layers.Conv2D(
+            self.conv_layers.append(tf.keras.layers.Conv2D(
                 filters=filters, kernel_size=3, strides=(2,2), padding='same', activation=tf.keras.layers.LeakyReLU()))
-        self.discriminator.add([
+        #Final classifier layers
+        self.classifier_layers = [
+            tf.keras.layers.Dropout(0.4),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(1, activation='sigmoid')
-        ])
+        ]
     
     def call(self, inputs):
-        outputs = self.discriminator(inputs)
+        x = self.input_layer(inputs)
+        for layer in self.conv_layers:
+            x = layer(x)
+        for layer in self.classifier_layers:
+            x = layer(x)
+        return x
 
     def get_filters(self, i):
         2**(5+i)
@@ -194,9 +212,11 @@ def train_gan(gan, dataset, epochs):
 
     Returns:
         losses (dict) - Dictionary containing lists of generator and discriminator losses at each batch
+    
+    Notes:
+        batch_size computed inside loop to handle the possibility of a final batch of different length
     """
-    batch_size = int(dataset._batch_size)
-    generator, discriminator = gan.get_layers
+    generator, discriminator = gan.layers
     coding_size = generator.coding_size
     discriminator_loss = []
     generator_loss = []
@@ -204,6 +224,7 @@ def train_gan(gan, dataset, epochs):
         batch = 1
         for X_batch in dataset:
             #Train discriminator
+            batch_size = len(X_batch)
             noise = tf.random.normal(shape=[batch_size, coding_size])
             generated_images = generator(noise)
             X_fake_and_real = tf.concat([generated_images, X_batch], axis=0)
@@ -218,6 +239,6 @@ def train_gan(gan, dataset, epochs):
             g_loss = gan.train_on_batch(noise, y2)
             generator_loss.append(g_loss)
             batch += 1
-        print(f"Epoch: {epoch}, Batch: {batch}, Discriminator loss: {discriminator_loss[-1]}, Generator loss: {generator_loss[-1]}")
+        print(f"Epoch: {epoch}, Discriminator loss: {discriminator_loss[-1]}, Generator loss: {generator_loss[-1]}")
     losses = {"d_loss": discriminator_loss, "g_loss": generator_loss}
     return losses
