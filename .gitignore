@@ -7,6 +7,8 @@ pokemon-venv/
 testing.ipynb
 .env
 Models/
+api/api-venv/
+api/.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

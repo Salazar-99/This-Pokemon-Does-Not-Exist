@@ -40,5 +40,5 @@ sample_from_gan(gan)
 print("Would you like to save and upload the trained model? (Y/N): ")
 choice = input()
 if choice in ["Y", "Yes", "yes"]:
-    tf.saved_model.save(gan, 'Models/GAN')
+    gan.save('Models/GAN')
     upload_model(path_to_model='Models/GAN', object_name='gan')
