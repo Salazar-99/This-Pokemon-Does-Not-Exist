@@ -22,9 +22,11 @@ print("Building model...")
 generator = Generator(coding_size=args.coding_size)
 discriminator = Discriminator(conv_layers=args.conv_layers)
 gan = tf.keras.models.Sequential([generator, discriminator])
-discriminator.compile(loss='binary_crossentropy', optimizer='rmsprop')
+discriminator_optimizer = tf.keras.optimizers.RMSprop(learning_rate=4e-4)
+discriminator.compile(loss='binary_crossentropy', optimizer=discriminator_optimizer)
 discriminator.trainable = False
-gan.compile(loss='binary_crossentropy', optimizer='rmsprop')
+gan_optimizer = tf.keras.optimizers.RMSprop(learning_rate=1e-4)
+gan.compile(loss='binary_crossentropy', optimizer=gan_optimizer)
 
 #Train model
 print("Starting training...")

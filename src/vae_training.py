@@ -36,5 +36,5 @@ sample_from_vae(vae)
 print("Would you like to save and upload the trained model? (Y/N): ")
 choice = input()
 if choice in ["Y", "Yes", "yes"]:
-    tf.saved_model.save(vae, 'Models/VAE')
+    vae.save('Models/VAE')
     upload_model(path_to_model='Models/VAE', object_name='vae')

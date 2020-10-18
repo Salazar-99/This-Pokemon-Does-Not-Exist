@@ -91,7 +91,7 @@ def upload_model(path_to_model, object_name, bucket='pokemon-dne'):
     Notes:
         In order to use boto3, AWS credentials must be configured on host machine.
         In this project this is accomplished by creating a .env file containing
-        the nevessary credentials and running the configure_aws.sh script to 
+        the necessary credentials and running the configure_aws.sh script to 
         write them in the correct format to their default location.
     """
     s3_client = boto3.client('s3')
